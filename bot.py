@@ -7,30 +7,22 @@ from telegram.ext import Application, MessageHandler, ContextTypes, filters
 
 TOKEN = os.environ["BOT_TOKEN"]
 
-BAD_GIF_ID = "AgADRaMAAlftoEg"
-
 app = Flask(__name__)
 
 telegram_app = Application.builder().token(TOKEN).build()
 
 
-async def delete_bad_gif(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message:
-        return
-
-    if update.message.animation:
+async def get_gif_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message and update.message.animation:
         gif = update.message.animation
 
-        if gif.file_unique_id == BAD_GIF_ID:
-            try:
-                await update.message.delete()
-                print("Запрещённая GIF удалена")
-            except Exception as e:
-                print("Ошибка удаления:", repr(e))
+        await update.message.reply_text(
+            f"file_unique_id:\n{gif.file_unique_id}"
+        )
 
 
 telegram_app.add_handler(
-    MessageHandler(filters.ANIMATION, delete_bad_gif)
+    MessageHandler(filters.ANIMATION, get_gif_id)
 )
 
 
@@ -43,7 +35,6 @@ def home():
 def webhook():
     try:
         data = request.get_json(force=True)
-
         update = Update.de_json(data, telegram_app.bot)
 
         asyncio.run(
@@ -66,7 +57,4 @@ if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", 10000))
 
-    app.run(
-        host="0.0.0.0",
-        port=port
-    )
+    app.run(host="0.0.0.0", port=port)
