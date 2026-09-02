@@ -1,4 +1,5 @@
 import os
+import asyncio
 
 from flask import Flask, request
 from telegram import Update
@@ -16,12 +17,11 @@ async def handle_gif(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if update.message.animation:
-        print("file_id:", update.message.animation.file_id)
-        print("file_unique_id:", update.message.animation.file_unique_id)
+        gif = update.message.animation
 
         await update.message.reply_text(
-            f"file_id:\n{update.message.animation.file_id}\n\n"
-            f"file_unique_id:\n{update.message.animation.file_unique_id}"
+            f"file_id:\n{gif.file_id}\n\n"
+            f"file_unique_id:\n{gif.file_unique_id}"
         )
 
 
@@ -32,32 +32,39 @@ telegram_app.add_handler(
 
 @app.route("/", methods=["GET"])
 def home():
-    return "Bot is running!"
+    return "Bot is running!", 200
 
 
 @app.route("/webhook", methods=["POST"])
-async def webhook():
-    data = request.get_json(force=True)
+def webhook():
+    try:
+        data = request.get_json(force=True)
 
-    update = Update.de_json(data, telegram_app.bot)
+        update = Update.de_json(data, telegram_app.bot)
 
-    await telegram_app.process_update(update)
+        asyncio.run(
+            telegram_app.process_update(update)
+        )
 
-    return "OK"
+        return "OK", 200
+
+    except Exception as e:
+        print("ERROR:", repr(e))
+        return "ERROR", 500
 
 
 if __name__ == "__main__":
     import asyncio
 
-    async def main():
+    async def start():
         await telegram_app.initialize()
         await telegram_app.start()
 
-        port = int(os.environ.get("PORT", 10000))
+    asyncio.run(start())
 
-        app.run(
-            host="0.0.0.0",
-            port=port
-        )
+    port = int(os.environ.get("PORT", 10000))
 
-    asyncio.run(main())
+    app.run(
+        host="0.0.0.0",
+        port=port
+    )
