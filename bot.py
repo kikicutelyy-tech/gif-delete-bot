@@ -12,17 +12,21 @@ app = Flask(__name__)
 telegram_app = Application.builder().token(TOKEN).build()
 
 
-async def get_gif_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message and update.message.animation:
+async def handle_gif(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message:
+        return
+
+    if update.message.animation:
         gif = update.message.animation
 
         await update.message.reply_text(
+            f"file_id:\n{gif.file_id}\n\n"
             f"file_unique_id:\n{gif.file_unique_id}"
         )
 
 
 telegram_app.add_handler(
-    MessageHandler(filters.ANIMATION, get_gif_id)
+    MessageHandler(filters.ANIMATION, handle_gif)
 )
 
 
@@ -35,6 +39,7 @@ def home():
 def webhook():
     try:
         data = request.get_json(force=True)
+
         update = Update.de_json(data, telegram_app.bot)
 
         asyncio.run(
@@ -49,6 +54,8 @@ def webhook():
 
 
 if __name__ == "__main__":
+    import asyncio
+
     async def start():
         await telegram_app.initialize()
         await telegram_app.start()
@@ -57,4 +64,7 @@ if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", 10000))
 
-    app.run(host="0.0.0.0", port=port)
+    app.run(
+        host="0.0.0.0",
+        port=port
+    )
